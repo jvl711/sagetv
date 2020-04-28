@@ -1,5 +1,4 @@
 # Change Log
-
 * Change service launcher (Windows) to support local JRE
 * Change watch ignore times from constants to properties
 * Tidy up warnings in VS2015 for data type conversions (Windows)
@@ -10,11 +9,11 @@
 * Set default 1G heap for 64-bit (Windows)
 * Updates for OPTUS D1 transponder changes to DVB-S2
 * Fix: Schedules Direct EPG grabber failed to finish updating some satellite-based lineups
+* Added Forced as a property to SubpictureFormat
+* Added the ability to auto select forced subtitle track based on the default audio language
 * Added the ability to use a Plugin for format detection of media files instead of built in ffmpeg.
 * Added 2160p as a Pretty resolution to VideoFormat
 * Added HEVC as a supported media format
-* Added Forced as a property to SubpictureFormat
-* Added the ability to auto select forced subtitle track based on the default audio language
 
 ## Version 9.2.1 (2019-03-23)
 * 64-bit AVI playback and music fixes (Windows)
