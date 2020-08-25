@@ -6443,6 +6443,7 @@ public class MiniClientSageRenderer extends SageRenderer
 
   public boolean isSupportedPullContainerFormat(String testMe)
   {
+    System.out.println("JVL: PullContainers: " + pullContainers.toString());
     return testMe != null && pullContainers != null && pullContainers.contains(testMe.toUpperCase());
   }
 

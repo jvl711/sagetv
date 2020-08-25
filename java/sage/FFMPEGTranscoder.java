@@ -15,6 +15,8 @@
  */
 package sage;
 
+import java.text.DecimalFormat;
+
 public class FFMPEGTranscoder implements TranscodeEngine
 {
   private static final boolean XCODE_DEBUG = Sage.DBG && Sage.getBoolean("media_server/transcode_debug", false);
@@ -535,6 +537,8 @@ public class FFMPEGTranscoder implements TranscodeEngine
 
   public void setTranscodeFormat(String str, sage.media.format.ContainerFormat inSourceFormat)
   {
+    System.out.println("******************setTanscoderFormat Called: " + str);
+      
     sourceFormat = inSourceFormat;
     if ("dynamic".equalsIgnoreCase(str))
       dynamicRateAdjust = true;
@@ -548,6 +552,8 @@ public class FFMPEGTranscoder implements TranscodeEngine
       xcodeParams = Sage.get(MediaServer.XCODE_QUALITIES_PROPERTY_ROOT + str, null);
       if (xcodeParams == null)
       {
+        System.out.println("Setting defaults");
+        
         // The format itself probably contains the information we need
         String f = "dvd";
         String vcodec = "mpeg4";
@@ -564,6 +570,9 @@ public class FFMPEGTranscoder implements TranscodeEngine
         String packetsize = "1024";
         boolean deinterlace = false;//true;
         java.util.StringTokenizer toker = new java.util.StringTokenizer(str, ";");
+        
+        System.out.println("Prop tokens count: " + toker.countTokens());
+        
         while (toker.hasMoreTokens())
         {
           String currToke = toker.nextToken();
@@ -572,6 +581,9 @@ public class FFMPEGTranscoder implements TranscodeEngine
             continue;
           String propName = currToke.substring(0, eqIdx);
           String propVal = currToke.substring(eqIdx + 1);
+          
+          System.out.println("Processing Prop: " + propName + " Value: " + propVal);
+          
           try
           {
             if ("videocodec".equals(propName))
@@ -588,12 +600,23 @@ public class FFMPEGTranscoder implements TranscodeEngine
               preservedAudioBitrate = Integer.parseInt(propVal);
               ab = Integer.toString(preservedAudioBitrate/1000);
             }
+            else if ("audiochannels".equals(propName))
+            {
+                ac = propVal;
+            }
             else if ("gop".equals(propName))
               g = propVal;
             else if ("bframes".equals(propName))
               bf = propVal;
             else if ("fps".equals(propName))
-              r = propVal;
+              if("SOURCE".equals(propVal))
+              {
+                DecimalFormat twoDForm = new DecimalFormat("#.##");
+                r = twoDForm.format(sourceFormat.getVideoFormat().getFps());
+                g = (Math.round(sourceFormat.getVideoFormat().getFps()) * 10) + "";
+              }
+              else    
+                r = propVal;
             else if ("audiosampling".equals(propName))
               ar = propVal;
             else if ("resolution".equals(propName))
@@ -603,8 +626,14 @@ public class FFMPEGTranscoder implements TranscodeEngine
                 s = MMC.getInstance().isNTSCVideoFormat() ? "720x480" : "720x576";
                 deinterlace = false;
               }
-              else
+              else if("CIF".equals(propVal))
                 s = MMC.getInstance().isNTSCVideoFormat() ? "352x240" : "352x288";
+              else if("1080".equals(propVal))
+                s = "1920x1080";
+              else if("SOURCE".equals(propVal))
+                s = inSourceFormat.getVideoFormat().getWidth() + "x" + inSourceFormat.getVideoFormat().getHeight();
+              else
+                s = "1280x720";
             }
             else if ("container".equals(propName))
               f = propVal;
@@ -612,9 +641,16 @@ public class FFMPEGTranscoder implements TranscodeEngine
           catch (NumberFormatException e)
           {}
         }
+        /*
+        xcodeParams = "-f " + f + " -vcodec " + vcodec + " -b " + b + " -s " + s + " -r " + r + " -g " + g + " -bf " + bf + (deinterlace ? " -deinterlace " : "")
+                + " -acodec " + acodec + " -ab " + ab + " -ar " + ar + " -ac " + ac
+                + " -packetsize " + packetsize;*/
 
         xcodeParams = "-f " + f + " -vcodec " + vcodec + " -s " + s + " -ac " + ac + " -g " + g + " -bf " + bf + (deinterlace ? " -deinterlace " : "") +
             " -acodec " + acodec + " -r " + r + " -b " + b + " -ar " + ar + " -ab " + ab + " -packetsize " + packetsize;
+        
+        System.out.println("JVL: XCODE Parameters: " + xcodeParams);
+        
       }
       dynamicRateAdjust = false;
     }
@@ -632,6 +668,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
 
   public void startTranscode() throws java.io.IOException
   {
+    System.out.println("******************************************startTranscode Called******************************************************");
     xcodeBufferBaseNum = 0;
     lastExitCode = -1;
 
@@ -776,6 +813,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     boolean isMpeg4Codec = false;
     if (httplsMode)
     {
+      System.out.println("******************************************HTTPLSMODE******************************************************");
       isMpeg4Codec = true;
       // Add the parameters for dynamic bitrate control
       xcodeParamsVec.add("-f");
@@ -885,6 +923,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     }
     else if (dynamicRateAdjust)
     {
+      System.out.println("******************************************Dynamic Rate Adjust******************************************************");
       isMpeg4Codec = true;
       // Add the parameters for dynamic bitrate control
       xcodeParamsVec.add("-f");
@@ -981,6 +1020,8 @@ public class FFMPEGTranscoder implements TranscodeEngine
     }
     else
     {
+      System.out.println("******************************************Not Dynamic Rate Adjust******************************************************");
+      System.out.println("xcode Params: " + xcodeParams);
       int flagsIndex = -1;
       java.util.StringTokenizer toker = new java.util.StringTokenizer(xcodeParams);
       while (toker.hasMoreTokens())
@@ -1116,6 +1157,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     // it or at the beginning.
     if (isMpeg4Codec && outputFile == null && !httplsMode) // don't do rate control opts if we're not streaming
     {
+      System.out.println("******************************************SOMETHING ABOUT RATE CONTROL******************************************************");
       xcodeParamsVec.add("-muxrate");
       xcodeParamsVec.add("2000000"); // really high to prevent underflow errors TESTING
       xcodeParamsVec.add("-rc_init_cplx");
@@ -1159,6 +1201,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     // we can only setup stream mappings if we have index information in the format.
     if (currAudioBitrateKbps > 0 && sourceFormat != null && sourceFormat.getNumAudioStreams() > 1 && currVideoBitrateKbps > 0)
     {
+      System.out.println("******************************************Doing Audio Stream Mapping******************************************************");
       // Get the FFMPEG only format so we can go off the stream indexes that it wants for transcoding
       sage.media.format.ContainerFormat ffFormat = sage.media.format.FormatParser.getFFMPEGFileFormat(currFile.toString());
       if (ffFormat != null)
@@ -1237,6 +1280,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     // NOTE: 10/16/06 - the other set of params totally screw up our A/V sync for fixed rate placeshifting @ 15fps !!!!
     if (dynamicRateAdjust || (isMpeg4Codec && outputFile == null))
     {
+      System.out.println("******************************************Adding vsync/async******************************************************");
       xcodeParamsVec.set(syncIndexInsert, "-vsync");
       // For AVI source files we need to allow video frame dropping for it to get proper initial sync if there was
       // also a seek
@@ -1374,6 +1418,7 @@ public class FFMPEGTranscoder implements TranscodeEngine
     forciblyStopped = false;
     if (bufferOutput)
     {
+      System.out.println("******************************************BUFFER OUTPUT******************************************************");
       xcodeStdoutThread = new Thread("XcodeDataConsumer")
       {
         public void run()
