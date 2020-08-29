@@ -602,7 +602,9 @@ public class FFMPEGTranscoder implements TranscodeEngine
             }
             else if ("audiochannels".equals(propName))
             {
-                ac = propVal;
+                //Only set property if the source audio has atleast as many channels as the setting
+                if(Integer.parseInt(propVal) <= sourceFormat.getAudioFormat().getChannels())
+                  ac = propVal;
             }
             else if ("gop".equals(propName))
               g = propVal;

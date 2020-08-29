@@ -762,49 +762,71 @@ public class MiniPlayer implements DVDMediaPlayer
         
         System.out.println("******************************* Investigating PULL/PUSH and supported codecs **********************************");
         
+        System.out.println("Determining if MPEG4_VIDEO is supported clientCanDoMpeg4");
+        
         if (mcsr.isSupportedVideoCodec(sage.media.format.MediaFormat.MPEG4_VIDEO))
         {
-          System.out.println("JVL: clientCanDoMpeg4");
           clientCanDoMpeg4 = true;
         }
+        System.out.println("\tclientCanDoMpeg4: " + clientCanDoMpeg4);
+        
+        System.out.println("Determining if the client can do pull. Determined if there is a hostname, and it starts with file://");
+        
         if (hostname != null && hostname.startsWith("file://"))
         {
-          System.out.println("JVL: Url starts with file.  clientDoes pull");
           clientDoesPull = true;
           pureLocal = true;
+          System.out.println("\tclientDoesPull: " + clientDoesPull);
+          System.out.println("\tpureLocal: " + pureLocal);
         }
         else
         {
+          System.out.println("\tSince we are not local, checking to see if container format is suppoted.");
           clientDoesPull = mcsr.isSupportedPullContainerFormat(currMF.getContainerFormat());
-          System.out.println("JVL: CurrentContainer: " + currMF.getContainerFormat());
           
-          
-          System.out.println("JVL: Checking Container Suppurt...  clientDoesPull: " + clientDoesPull);
+          System.out.println("\t\tCurrentContainer: " + currMF.getContainerFormat());
+          System.out.println("\t\tclientDoesPull: " + clientDoesPull);
           
           if (clientDoesPull)
           {
+            System.out.println("\tContainer is supported, checking audio/video codec support");
             // Check the audio & video formats
             String vidForm = currMF.getPrimaryVideoFormat();
             String audForm = currMF.getPrimaryAudioFormat();
-            if (vidForm.length() > 0 && !mcsr.isSupportedVideoCodec(vidForm))
-              clientDoesPull = false;
-            if (audForm.length() > 0 && !mcsr.isSupportedAudioCodec(audForm))
-              clientDoesPull = false;
             
-            System.out.println("JVL: If container is not supported.  Checking audio/video support...  clientDoesPull: " + clientDoesPull);
+            System.out.println("\t\tvidForm: " + vidForm);
+            System.out.println("\t\taudForm: " + audForm);
+            
+            if (vidForm.length() > 0 && !mcsr.isSupportedVideoCodec(vidForm))
+            {
+              System.out.println("\t\tVideo codec is not supported or unknown");
+              clientDoesPull = false;
+            }
+            if (audForm.length() > 0 && !mcsr.isSupportedAudioCodec(audForm))
+            {
+              clientDoesPull = false;
+              System.out.println("\t\tAudio codec is not supported or unknown");
+            }
+            
+            
           }
           fixedPushFormat = mcsr.getFixedPushMediaFormat();
-          System.out.println("JVL: Getting fixed push format: " + fixedPushFormat);
+          System.out.println("Fixed push format setting from client: " + fixedPushFormat);
           
+          
+          System.out.println("Fixed push format setting from client: " + fixedPushFormat);
           // We use HTTP Live Streaming for this
           if (mcsr.isIOSClient() && (currMF.isVideo() || currMF.isTV()))
             clientDoesPull = httpls = true;
 
+          System.out.println("Checking bandwidth to the client");
           uiBandwidthEstimate = mcsr.getEstimatedBandwidth();
+          
+          System.out.println("Bandwidth: " + uiBandwidthEstimate);
           // Disable transcoding on the fly
           if (uiBandwidthEstimate < 500000 && (clientCanDoMpeg4 || httpls))
           {
-            System.out.println("JVL: disbale transcode if bandwidth < 500000 or client cannot do mpeg4");
+            System.out.println("\tBandwidth is < 500000 and client can do mpeg4 or httpls");
             // No estimated BW from the UI. Do a push to the MiniClient before it's setup and it'll
             // just dump that buffer, but we'll get to see how much time it took
             int oldPriority = Thread.currentThread().getPriority();
@@ -931,6 +953,14 @@ public class MiniPlayer implements DVDMediaPlayer
         colorKey = null;
       }
 
+      System.out.println("Checking for low bandwidth (local client, MiniClient, supports push MPEG2_TS or MPEG2_PS, less than required bandwidth and MPEG4)");
+      System.out.println("\tpureLocal: " + pureLocal);
+      System.out.println("\tMiniClient Renderer is not null: " + (mcsr != null));
+      System.out.println("\tMPEG2_PS Support: " + mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_PS));
+      System.out.println("\tMPEG2_TS Support: " + mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_TS));
+      System.out.println("\tIsLowBandwidth: " + (uiBandwidthEstimate < Sage.getInt("miniplayer/min_bandwidth_for_no_transcode", 2000000)));
+      System.out.println("\tclientCanDoMpeg4: " + clientCanDoMpeg4);
+      
       // NOTE: We should really check the media's rate against our bandwidth and not use 2Mbps as the bounds
       if (!pureLocal && mcsr != null && (mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_PS) ||
           mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_TS)) && uiBandwidthEstimate < Sage.getInt("miniplayer/min_bandwidth_for_no_transcode", 2000000) && clientCanDoMpeg4)
@@ -941,6 +971,14 @@ public class MiniPlayer implements DVDMediaPlayer
 
       boolean useOriginalAudioTrack = true;
 
+      System.out.println("Checking for whether we are supporting push/pull");
+      
+      System.out.println("\tclientDoesPull: " + clientDoesPull);
+      System.out.println("\thttpls: " + httpls);
+      System.out.println("\tclientDoesMPEG2Push: " + clientDoesMPEG2Push);
+      System.out.println("\tclientCanDoMpeg4: " + clientCanDoMpeg4);
+      System.out.println("\tIsNOTLowBandwidth: " + (uiBandwidthEstimate >= Sage.getInt("miniplayer/min_bandwidth_for_no_transcode", 2000000)));
+      
       if (clientDoesPull && (httpls || pureLocal || !clientDoesMPEG2Push || !clientCanDoMpeg4 || uiBandwidthEstimate >= Sage.getInt("miniplayer/min_bandwidth_for_no_transcode", 2000000)))
       {
         if (Sage.DBG) System.out.println("MiniPlayer is using Pull mode playback");
@@ -959,17 +997,7 @@ public class MiniPlayer implements DVDMediaPlayer
          * codecs are supported we just remux it instead
          * 4. For extenders that can do mpeg4 and its low bandwidth mode; then we transcode into the same format as the placeshifter uses
          */
-        
-        System.out.println("Reason for switch to push");
-        System.out.println("\tclientDoesPull: " + clientDoesPull);
-        System.out.println("\thttpls: " + httpls);
-        System.out.println("\tclientDoesMPEG2Push: " + clientDoesMPEG2Push);
-        System.out.println("\tuiBandwidthEstimate: " + uiBandwidthEstimate);
-        System.out.println("\tSage.getInt(\"miniplayer/min_bandwidth_for_no_transcode\", 2000000): " + Sage.getInt("miniplayer/min_bandwidth_for_no_transcode", 2000000));
-        System.out.println("\tclientCanDoMpeg4: " + clientCanDoMpeg4);
-        
-        
-        
+
         if (Sage.DBG) System.out.println("MiniPlayer is using Push mode playback");
         pushMode = true; // shouldPush(majorTypeHint, minorTypeHint);
         useNioTransfers = Sage.getBoolean("use_nio_transfers", false);
@@ -982,7 +1010,7 @@ public class MiniPlayer implements DVDMediaPlayer
         System.out.println("\tlowBandwidth: " + lowBandwidth);
         
         //if (!mediaExtender || lowBandwidth/* && ((fixedPushFormat != null && fixedPushFormat.length() > 0) || uiBandwidthEstimate < 2000000)*/)
-        if (!mediaExtender || lowBandwidth || (fixedPushFormat != null && fixedPushFormat.length() > 0))
+        if (!mediaExtender || lowBandwidth)
         {
           if (Sage.DBG) System.out.println("MiniPlayer is using the MPEG4 transcoder");
           transcoded = true;
@@ -1103,7 +1131,7 @@ public class MiniPlayer implements DVDMediaPlayer
             System.out.println("Checking if client can do MPEGHD again....");
             if (!clientCanDoMPEGHD)
             {
-              System.out.println("\tClient can not do MPEGHD");
+              System.out.println("\tClient can NOT do MPEGHD");
               if (!containerOK || (hasVideo && !videoOK) || (hasAudio && !audioOK))
               {
                 System.out.println("\tEither container format or codec is not supporte...");
@@ -1123,7 +1151,7 @@ public class MiniPlayer implements DVDMediaPlayer
             }
             else
             {
-              System.out.println("\tClient can not do MPEGHD");
+              System.out.println("\tClient can do MPEGHD");
               if ((hasVideo && !videoOK) || (hasAudio && !audioOK)/* ||
 								(!containerOK && !hasVideo && minorTypeHint == MediaFile.MEDIASUBTYPE_MP3)*/)
               {
@@ -1184,13 +1212,20 @@ public class MiniPlayer implements DVDMediaPlayer
           else
           {
             if (Sage.DBG) System.out.println("MiniPlayer is using the transcoder");
-            System.out.println("\tGoing to use the Mpeg2Remuxer");
                 
             mpegSrc = new FastMpeg2Reader(file, hostname);
             mpegSrc.setActiveFile(timeshifted);
             sage.media.format.ContainerFormat currFileFormat = currMF.getFileFormat();
             if (currFileFormat != null && "true".equals(currFileFormat.getMetadataProperty("VARIED_FORMAT")))
               currFileFormat = sage.media.format.FormatParser.getFileFormat(file);
+            
+            //Check to see if there was a fixed format defined for transcoding
+            if(fixedPushFormat != null && fixedPushFormat.length() > 0)
+            {
+                if (Sage.DBG) System.out.println("\tOverriding transcode mode because a fixed format was set");
+                prefTranscodeMode = fixedPushFormat;
+            }
+            
             
             System.out.println("\tprefTranscodeMode: " + prefTranscodeMode);
             System.out.println("\tcurrFileFormat: " + currFileFormat.getFullPropertyString());
