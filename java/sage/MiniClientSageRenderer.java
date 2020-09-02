@@ -6438,6 +6438,8 @@ public class MiniClientSageRenderer extends SageRenderer
 
   public boolean isSupportedPushContainerFormat(String testMe)
   {
+    System.out.println("Supported push containers: " + pushContainers);
+      
     return testMe != null && pushContainers != null && pushContainers.contains(testMe.toUpperCase());
   }
 

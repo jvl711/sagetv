@@ -1026,15 +1026,11 @@ public class MiniPlayer implements DVDMediaPlayer
         else
         {
           System.out.println("We are a media extender, and we are not low bandwidth....");
-        
           
           sage.media.format.ContainerFormat cf = currMF.getFileFormat();
           if (cf != null && mcsr != null)
           {
-            boolean containerOK = mcsr.isSupportedPushContainerFormat(cf.getFormatName()) ||
-                (Sage.getBoolean("enable_internal_push_remuxer", true) &&
-                    sage.media.format.MediaFormat.MPEG2_TS.equals(cf.getFormatName()) &&
-                    mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_PS));
+            boolean containerOK = mcsr.isSupportedPushContainerFormat(cf.getFormatName()) || (Sage.getBoolean("enable_internal_push_remuxer", true) && sage.media.format.MediaFormat.MPEG2_TS.equals(cf.getFormatName()) && mcsr.isSupportedPushContainerFormat(sage.media.format.MediaFormat.MPEG2_PS));
             sage.media.format.VideoFormat vidFormat = cf.getVideoFormat();
             
             System.out.println("\tMPEG2_TS containerOK (I think it wants to just remux into MPEG2_TS: " + containerOK);
@@ -1042,61 +1038,75 @@ public class MiniPlayer implements DVDMediaPlayer
             
             boolean videoOK = false;
             boolean hasVideo = false;
+            //Check to see if there is a fixedPushFormat and we can not do pull.  If so force transcode to the fixed format
+            
+            
             if (vidFormat != null)
             {
-              System.out.println("\tConfirming there is video");
-              hasVideo = true;
-              System.out.println("\tChecking to see if video it MPEG2");
-              if (sage.media.format.MediaFormat.MPEG2_VIDEO.equals(vidFormat.getFormatName()))
-              {
-                System.out.println("\tVideo is MPEG2");
-                // Video format might be OK if it's an appropriate resolution
-                System.out.println("\tChecking to see if video codec is supported");
-                if (!mcsr.isSupportedVideoCodec(vidFormat.getFormatName()))
+              //System.out.println("\tDoing a check if we are forcing transcoding...");
+              //if(fixedPushFormat != null && fixedPushFormat.length() > 0 && !clientDoesPull)
+              //{
+              //  System.out.println("\tForcing transcode: true");
+              //  transcoded = true;
+              //}
+              //else
+              //{
+                System.out.println("\tForcing transcode: false");
+                
+                System.out.println("\tConfirming there is video");
+                hasVideo = true;
+                System.out.println("\tChecking to see if video it MPEG2");
+                if (sage.media.format.MediaFormat.MPEG2_VIDEO.equals(vidFormat.getFormatName()))
                 {
-                  videoOK = false;
-                  System.out.println("\tVideo codec is not supported. Setting video to False");
-                  System.out.println("\tVideo codec: " + vidFormat.getFormatName());
+                  System.out.println("\tVideo is MPEG2");
+                  // Video format might be OK if it's an appropriate resolution
+                  System.out.println("\tChecking to see if video codec is supported");
+                  if (!mcsr.isSupportedVideoCodec(vidFormat.getFormatName()))
+                  {
+                    videoOK = false;
+                    System.out.println("\tVideo codec is not supported. Setting video to False");
+                    System.out.println("\tVideo codec: " + vidFormat.getFormatName());
+                  }
+                  else if (clientCanDoMPEGHD)
+                  {
+                    System.out.println("\tClient can do do MPEGHD. Setting video to OK");
+                    videoOK = true;
+                  }
+                  else if (vidFormat.getWidth() <= 720)
+                  {
+
+                    if (MMC.getInstance().isNTSCVideoFormat())
+                    {  
+                      if (vidFormat.getHeight() <= 480 && vidFormat.getFps() <= 30.1) // 30fps or less, and within NTSC resolution
+                      {
+                        System.out.println("\tVideo is SD < 30.1 FPS...  Setting to Video OK");
+                        // Format is OK for video!
+                        videoOK = true;
+                      }
+                    }
+                    else
+                    {
+                      if (vidFormat.getHeight() <= 576 && vidFormat.getFps() <= 25.1) // 25fps or less & within PAL resolution
+                      {
+                        System.out.println("\tVideo is SD < 25.1 FPS...  Setting to Video OK");
+                        // Format is OK for video!
+                        videoOK = true;
+                      }
+                    }
+                  }
                 }
-                else if (clientCanDoMPEGHD)
+                else if (mcsr.isSupportedVideoCodec(vidFormat.getFormatName()))
                 {
-                  System.out.println("\tClient can do do MPEGHD. Setting video to OK");
+                  System.out.println("\tVideo is not MPEG2 and is a supported codec. Setting video to OK");
+                  System.out.println("\tVideo codec: " + vidFormat.getFormatName());
                   videoOK = true;
                 }
-                else if (vidFormat.getWidth() <= 720)
+                else
                 {
-                  
-                  if (MMC.getInstance().isNTSCVideoFormat())
-                  {  
-                    if (vidFormat.getHeight() <= 480 && vidFormat.getFps() <= 30.1) // 30fps or less, and within NTSC resolution
-                    {
-                      System.out.println("\tVideo is SD < 30.1 FPS...  Setting to Video OK");
-                      // Format is OK for video!
-                      videoOK = true;
-                    }
-                  }
-                  else
-                  {
-                    if (vidFormat.getHeight() <= 576 && vidFormat.getFps() <= 25.1) // 25fps or less & within PAL resolution
-                    {
-                      System.out.println("\tVideo is SD < 25.1 FPS...  Setting to Video OK");
-                      // Format is OK for video!
-                      videoOK = true;
-                    }
-                  }
+                    System.out.println("\tVideo is not MPEG2 and is NOT a supported codec. Leaving video as False");
                 }
               }
-              else if (mcsr.isSupportedVideoCodec(vidFormat.getFormatName()))
-              {
-                System.out.println("\tVideo is not MPEG2 and is a supported codec. Setting video to OK");
-                System.out.println("\tVideo codec: " + vidFormat.getFormatName());
-                videoOK = true;
-              }
-              else
-              {
-                  System.out.println("\tVideo is not MPEG2 and is NOT a supported codec. Leaving video as False");
-              }
-            }
+            //}
             sage.media.format.AudioFormat audFormat = cf.getAudioFormat();
             boolean audioOK = false;
             boolean hasAudio = false;
