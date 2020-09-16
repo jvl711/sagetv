@@ -1232,8 +1232,22 @@ public class MiniPlayer implements DVDMediaPlayer
             //Check to see if there was a fixed format defined for transcoding
             if(fixedPushFormat != null && fixedPushFormat.length() > 0)
             {
-                if (Sage.DBG) System.out.println("\tOverriding transcode mode because a fixed format was set");
-                prefTranscodeMode = fixedPushFormat;
+                //if (Sage.DBG) System.out.println("\tOverriding transcode mode because a fixed format was set");
+                //prefTranscodeMode = fixedPushFormat;
+                
+                if(!fixedPushFormat.equalsIgnoreCase(prefTranscodeMode))
+                {
+                    System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    System.out.println("prefTranscodeMode != fixedTranscodeMode");
+                    System.out.println("prefTranscodeMode: " + prefTranscodeMode);
+                    System.out.println("fixedPushFormat: " + fixedPushFormat);
+                    System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                }
+                else
+                {
+                    System.out.println("\tprefTranscodeMode == fixedTranscodeMode");
+                }
+                
             }
             
             
