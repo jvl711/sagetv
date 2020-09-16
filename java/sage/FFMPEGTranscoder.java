@@ -787,13 +787,17 @@ public class FFMPEGTranscoder implements TranscodeEngine
     else
       xcodeParamsVec.add(IOUtils.getLibAVFilenameString("stv://" + currServer + "/" + currFile.toString()));
 
+    System.out.println("Determining the number of threads to use");
+    
     // output file threading (encode)
     int numThreads = Sage.getInt("xcode_process_num_threads", 0);
+    
     if (numThreads == 0)
     {
       try
       {
         numThreads = Runtime.getRuntime().availableProcessors() + 1;
+        System.out.println("\tRuntime.getRuntime().availableProcessors() + 1: " + numThreads);
       }
       catch (Throwable t)
       {
@@ -801,6 +805,9 @@ public class FFMPEGTranscoder implements TranscodeEngine
         numThreads = 3;
       }
     }
+    
+    System.out.println("\tnumThreads: " + numThreads + " multiThread: " + multiThread);
+    
     if (numThreads > 1 && multiThread)
     {
       // FFMPEG cannot handle more than 8 threads; now that we use 2 for decode...change this to 7

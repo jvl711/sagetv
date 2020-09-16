@@ -1323,8 +1323,16 @@ public class MiniPlayer implements DVDMediaPlayer
           finalLength = mpegSrc.length();
         if (serverSideTranscoding && mpegSrc != null && mpegSrc.getTranscoder() != null && mpegSrc.getTranscoder() instanceof FFMPEGTranscoder)
         {
+          System.out.println("Determining if we are going to enable multithreading for transcoder");
+          System.out.println("\tallow_multithreading_for_hdextender_placeshifting: " + Sage.getBoolean("xcode/allow_multithreading_for_hdextender_placeshifting", false));
+          System.out.println("\t!lowBandwidth " + !lowBandwidth);
+          System.out.println("\t!hdMediaExtender : " + !hdMediaExtender );
+            
           ((FFMPEGTranscoder)mpegSrc.getTranscoder()).setEstimatedBandwidth(uiBandwidthEstimate);
           ((FFMPEGTranscoder)mpegSrc.getTranscoder()).setThreadingEnabled(Sage.getBoolean("xcode/allow_multithreading_for_hdextender_placeshifting", false) || !hdMediaExtender || !lowBandwidth);
+          
+          System.out.println("\t Enable multithreading: " + (Sage.getBoolean("xcode/allow_multithreading_for_hdextender_placeshifting", false) || !hdMediaExtender || !lowBandwidth));
+          
         }
       }
       //mpegSrc.setTimeshifted(timeshifted);
